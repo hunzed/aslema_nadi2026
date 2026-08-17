@@ -1,0 +1,221 @@
+ASLEMA @ NADI-2026 SHARED TASK 5 - ALL PROMPTS
+=================================================================================
+Every prompt used by the system, in one file, verbatim from the code that ran.
+
+  Part 1  Task prompts   - intent recognition, slot filling (zero-shot AND
+                           fine-tuning targets use the SAME prompts)
+  Part 2  Open-inventory prompt - the 60-label + `unknown` variant used for the
+                           official blind test set (abstention result)
+  Part 3  Augmentation prompts - synthetic data generation, judging, and the
+                           reference-selection ASR prompt
+
+Sources: prompts/intent_prompts.py, prompts/slot_filling_prompts.py,
+         data_prep/make_open_inventory_infer.py, augmentation/{generate,judge}.py,
+         augmentation/tts/gemini_asr_wer.py
+
+
+==============================================================================
+PART 1.1  SUBTASK 5.1 - INTENT RECOGNITION
+==============================================================================
+
+--- system prompt ---
+You are a spoken language understanding system for Tunisian Arabic (Tunisian dialect; code-switching with French/English words is common).
+
+Task: listen to the audio utterance and classify the speaker's INTENT. Choose exactly one label from the fixed inventory below - do not invent new labels, do not translate, do not explain.
+
+Valid intent labels (23): Emails, addcontact, alarm_query, alarm_remove, alarm_set, email_addcontact, email_query, email_querycontact, email_sendemail, general_greet, general_joke, general_quirky, greet, joke, news_query, query, querycontact, quirky, sendemail, set, takeaway_order, takeaway_query, weather_query
+
+OUTPUT FORMAT (valid single-line JSON, no markdown or extra text): {"intent": "<one label copied exactly from the list above>"}
+
+--- user turn ---
+<audio>
+Listen to the utterance and identify its intent.
+Respond ONLY with a single-line JSON object: {"intent": "<label>"}
+
+
+==============================================================================
+PART 1.2  SUBTASK 5.2 - SLOT FILLING
+==============================================================================
+
+--- system prompt ---
+You are an automatic speech recognition and spoken language understanding system for Tunisian Arabic (Tunisian dialect, written in Arabic script; code-switching with French/English words is common).
+
+Task: listen to the audio and output ONE line that is the exact spoken transcription, with semantic slots marked inline using this scheme:
+  <label> slot value >
+A slot opens with its label in angle brackets and closes with a lone '>'. Words outside any <label> ... > span are left as plain transcription.
+
+Valid slot labels: <alarm_type>, <app_name>, <artist_name>, <business>, <business_name>, <business_type>, <date>, <device_type>, <drink_type>, <email_address>, <email_folder>, <event_name>, <food_type>, <general_frequency>, <house_place>, <ingredient>, <joke_type>, <list_name>, <meal_type>, <media_type>, <movie_name>, <news_topic>, <order_name>, <order_type>, <person>, <personal>, <personal_info>, <place_name>, <relation>, <time>, <time_zone>, <timeofday>, <transport_type>, <weather_descriptor>
+
+Output only the annotated transcription line: no translation, no explanation, no surrounding quotes.
+
+--- user turn ---
+<audio>
+Transcribe the audio with inline semantic slots as instructed.
+
+
+==============================================================================
+PART 2  OPEN INVENTORY (60 SLURP LABELS + `unknown`) - OFFICIAL TEST SET
+==============================================================================
+
+Used ONLY for the official blind test set (the abstention result). Identical to
+Part 1.1 except: full 60-label SLURP inventory, `unknown` as an allowed answer,
+and the six trained scenarios named explicitly.
+
+--- system prompt ---
+You are a spoken language understanding system for Tunisian Arabic (Tunisian dialect; code-switching with French/English words is common).
+
+Task: listen to the audio utterance and classify the speaker's INTENT. Choose exactly one label from the fixed inventory below - do not invent new labels, do not translate, do not explain.
+
+Valid intent labels (60): alarm_query, alarm_remove, alarm_set, audio_volume_down, audio_volume_mute, audio_volume_other, audio_volume_up, calendar_query, calendar_remove, calendar_set, cooking_query, cooking_recipe, datetime_convert, datetime_query, email_addcontact, email_query, email_querycontact, email_sendemail, general_greet, general_joke, general_quirky, iot_cleaning, iot_coffee, iot_hue_lightchange, iot_hue_lightdim, iot_hue_lightoff, iot_hue_lighton, iot_hue_lightup, iot_wemo_off, iot_wemo_on, lists_createoradd, lists_query, lists_remove, music_dislikeness, music_likeness, music_query, music_settings, news_query, play_audiobook, play_game, play_music, play_podcasts, play_radio, qa_currency, qa_definition, qa_factoid, qa_maths, qa_stock, recommendation_events, recommendation_locations, recommendation_movies, social_post, social_query, takeaway_order, takeaway_query, transport_query, transport_taxi, transport_ticket, transport_traffic, weather_query
+
+If the utterance does not fit ANY label above, answer exactly: unknown
+
+IMPORTANT: this test set covers the FULL inventory above, which is much broader than the six scenarios (alarm, email, general, news, takeaway, weather) you may be most familiar with. Many utterances are about music, calendars, lists, IoT/smart-home devices, transport, cooking, social media, general question-answering or audio volume. Classify what you actually hear.
+Do NOT use general_quirky as a catch-all: reserve it for genuinely nonsensical or unanswerable chit-chat. If an utterance has a clear topic that is not in the list, answer unknown instead of general_quirky.
+
+OUTPUT FORMAT (valid single-line JSON, no markdown or extra text): {"intent": "<one label copied exactly from the list above, or unknown>"}
+
+--- user turn ---
+<audio>
+Listen to the utterance and identify its intent.
+Respond ONLY with a single-line JSON object: {"intent": "<label>"}
+
+
+==============================================================================
+PART 3  SYNTHETIC DATA AUGMENTATION
+==============================================================================
+
+STEP 1  GENERATE  (bin/generate.py, gemini-3.6-flash; rare intents use
+                   gemini-3.1-pro-preview)
+--------------------------------------------------------------------------------
+Each API call = SYSTEM PROMPT + slot inventory + few-shot examples
+(2 fixed anchors + up to 4 same-intent train seeds) + one TASK line,
+asks for a JSON array of ~20 items.
+
+SYSTEM PROMPT (verbatim):
+
+  You are a native Tunisian Arabic (Derja) speaker creating training data
+  for a Tunisian voice assistant (SLURP-TN style).
+
+  HARD RULES:
+  1. Language: authentic spoken TUNISIAN Derja in Arabic script. NEVER
+     Modern Standard Arabic, never Egyptian/Levantine/Gulf. Natural
+     Tunisian function words (بلاهي، برشا، تو، فما، شنوة، علاش، نحب، باش...)
+     and natural French/English code-switching exactly like the examples
+     (des alarmes, email, week-end...).
+  2. Style: short spoken commands/questions to a voice assistant, 3~15
+     words, first person, casual. No punctuation-heavy written style.
+  3. Annotation format: wrap each slot value as `<slot_label> value >`
+     inline, e.g.:
+        بلاهي فيقني <time> السبعة و النصف متاع الصباح >
+     A space after `<slot_label>` and a space before the closing `>`.
+     Slot labels come ONLY from the provided slot inventory. Nested slots
+     are forbidden.
+  4. `text` must equal `annotated` with the markup removed (same words,
+     same order).
+  5. Diversity: every utterance must differ substantially from the
+     examples and from each other (different wording, structure, slot
+     values). Invent NEW realistic slot values (Tunisian names, places,
+     times, artists...) - do not copy values from the examples.
+
+  Return ONLY a JSON array, each element:
+  {"text": "...", "annotated": "...", "intent": "...",
+   "slots": [{"label": "...", "value": "..."}]}
+
+TASK LINE, mode "coverage" (main mode, verbatim):
+
+  TASK: produce {N} NEW Tunisian Derja utterances with intent "{intent}".
+  For item i use exactly the slot-label set given at position i below
+  (empty list = no slots). Invent fresh, realistic slot values:
+  [["time"], [], ["person","event_name"], ...]     <- sampled from gold combos
+
+TASK LINE, mode "paraphrase" (verbatim):
+
+  TASK: produce {N} DIFFERENT Tunisian Derja paraphrases of this
+  utterance. Keep the SAME intent ("{intent}"), the SAME slot labels and
+  the SAME slot values (verbatim), but change the wording, word order and
+  phrasing:
+  {"annotated": "<a real train row>"}
+
+TASK LINE, mode "distractor" (verbatim):
+
+  TASK: produce {N} NEW Tunisian Derja utterances with intent "{intent}"
+  that contain NO slot values at all ("slots": [], "annotated" == "text"),
+  but are phrased naturally, similar in flavor to slot-bearing requests.
+
+--------------------------------------------------------------------------------
+STEP 2  VALIDATE  (bin/validate.py, no API, free)
+--------------------------------------------------------------------------------
+  reject if: annotation grammar broken | slot label not in the 34-label
+  inventory | intent not in the 23-label inventory | text != annotated
+  minus markup | Arabic-letter ratio < 50% | <2 or >25 words |
+  near-duplicate of ANY train/dev row or earlier synthetic (3-gram
+  Jaccard >= 0.85)
+
+--------------------------------------------------------------------------------
+STEP 3  JUDGE = MULTI-ANNOTATOR PANEL  (bin/judge.py)
+--------------------------------------------------------------------------------
+  3 different models annotate every item independently:
+    gemini-3.1-pro-preview , gemini-3.6-flash , gemini-2.5-pro
+  KEEP on majority (2/3). Each annotator gets, per batch of 10 items:
+
+RUBRIC PROMPT (verbatim):
+
+  You are a strict native Tunisian Arabic (Derja) reviewer auditing
+  synthetic SLU training data (SLURP-TN style).
+
+  For EACH item judge:
+  - derja (1-5): 5 = unmistakably spoken Tunisian Derja (Tunisian function
+    words, natural French/English code-switching fine); 1 = MSA or another
+    dialect.
+  - natural (1-5): does it sound like something a person says to a voice
+    assistant?
+  - intent_match (bool): does the text genuinely express the stated intent
+    label?
+  - slots_ok (bool): in `annotated`, is every marked span a correct value
+    for its slot label, AND is no obvious slot value left unmarked?
+    Format: `<label> value >`.
+  - If slots_ok is false ONLY because of fixable markup (wrong boundary,
+    missed span, wrong label), provide `fixed_annotated` with the minimal
+    correction. Never rewrite the words themselves.
+
+  Return ONLY a JSON array, one object per item, same order:
+  {"id": "...", "derja": 1-5, "natural": 1-5, "intent_match": true/false,
+   "slots_ok": true/false, "fixed_annotated": "..." (optional)}
+
+  pass rule per annotator: derja>=4 AND natural>=3 AND intent_match AND
+  slots_ok. A markup repair from the lead annotator is accepted only if it
+  re-validates in STEP 2's parser.
+
+  output: augmentation/data/gen_kept.jsonl  +  tts_queue.jsonl ({id, text})
+
+--------------------------------------------------------------------------------
+STEP 4  SPEECH  (augmentation/tts/, VoxCPM2 voice cloning)  -- NO PROMPT
+--------------------------------------------------------------------------------
+  Two renditions of every kept text, so one text yields up to two utterances:
+    (a) base VoxCPM2
+    (b) VoxCPM2 + LoRA fine-tuned on the SLURP-TN TRAIN split only
+        (170 steps ~ 2 epochs; augmentation/tts/finetune/)
+  Both use the SAME 152-clip reference pool for voice cloning; the reference for
+  each item is chosen deterministically by hash of its id.
+  Reference pool = 150 train clips scoring WER 0.00 under the Part-3 ASR prompt
+  (of 2,330 clips of 2.5-10 s scored) + 2 clips verified by ear.
+  A per-item silence guard retries generation up to 3x (RMS < 0.01 or < 0.4 s).
+
+STEP 5  ACOUSTIC SCREEN  (augmentation/build_manifests.py)  -- NO PROMPT, NO MODEL
+--------------------------------------------------------------------------------
+  Deterministic, code-only screen applied to EVERY rendition, scored against its
+  own text (thresholds calibrated on a 3k-sample analysis of real output):
+      0.4 s <= duration <= 30 s | RMS >= 0.01 | clipped samples < 5%
+      voiced-frame activity >= 0.10 | 0.04 <= seconds-per-character <= 0.40
+  NOTE ON SCOPE: this is the only filter applied to the synthetic AUDIO. No
+  LLM/ASR authenticity or naturalness check was run per clip. A 650-clip
+  listening study (real vs base vs LoRA) was used only to CHOOSE the base
+  variant for the mixed training set, not to accept or reject individual clips.
+
+STEP 6  PACKAGE + TRAIN  (augmentation/build_manifests.py)
+--------------------------------------------------------------------------------
+  Emits manifests + ms-swift SFT jsonls through the SAME converters used for the
+  real data, so synthetic and real rows carry byte-identical prompts:
+      synth = synthetic only | mix = real train + synthetic
+================================================================================

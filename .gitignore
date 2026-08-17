@@ -1,0 +1,25 @@
+# caches / scratch
+__pycache__/
+*.py[cod]
+hf_cache/
+tmp/
+logs/
+.venv/
+venv/
+
+# data + artifacts (regenerate with data_prep/ and augmentation/)
+data/
+vendor/
+augmentation/data/
+models/
+outputs/
+results/
+*.wav
+*.jsonl
+*.csv
+!augmentation/data/.gitkeep
+
+# editor / OS
+.DS_Store
+.idea/
+.vscode/

@@ -1,0 +1,22 @@
+# Core serving/training stack (Python 3.11). Install into a fresh conda env:
+#   conda create -n aslema python=3.11 -y -c conda-forge --override-channels
+#   conda activate aslema && pip install -r requirements.txt
+ms-swift[all]
+vllm
+transformers
+accelerate
+peft
+deepspeed
+qwen-omni-utils
+librosa
+soundfile
+datasets
+jiwer
+speechbrain
+pandas
+tqdm
+# --- augmentation only -------------------------------------------------------
+google-genai
+# --- TTS: install in a SEPARATE venv (torch pins conflict with the above) -----
+#   see augmentation/tts/setup_voxcpm.sh
+# voxcpm
