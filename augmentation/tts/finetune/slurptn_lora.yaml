@@ -1,0 +1,30 @@
+pretrained_path: ${PROJ}/custom_gcp/hf_cache/hub/models--openbmb--VoxCPM2/snapshots/bffb3df5a29440629464e5e839f4d214c8714c3d
+train_manifest: ${PROJ}/augmentation/tts/finetune/slurptn_tts_train.jsonl
+val_manifest: ${PROJ}/augmentation/tts/finetune/slurptn_tts_val.jsonl
+sample_rate: 16000
+out_sample_rate: 48000
+batch_size: 2
+grad_accum_steps: 8
+num_workers: 8
+num_iters: 170
+log_interval: 10
+valid_interval: 500
+save_interval: 500
+learning_rate: 0.0001
+weight_decay: 0.01
+warmup_steps: 10
+max_steps: 1000
+max_batch_tokens: 8192
+max_grad_norm: 1.0
+save_path: ${PROJ}/augmentation/tts/finetune/checkpoints/slurptn_lora
+tensorboard: ${PROJ}/augmentation/tts/finetune/checkpoints/slurptn_lora/tb
+lambdas:
+  loss/diff: 1.0
+  loss/stop: 1.0
+lora:
+  enable_lm: true
+  enable_dit: true
+  enable_proj: false
+  r: 32
+  alpha: 32
+  dropout: 0.0
