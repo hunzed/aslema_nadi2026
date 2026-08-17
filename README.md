@@ -21,11 +21,13 @@ Official blind test: **1st in slot filling**, **4th of 8 in intent recognition**
 ```
 config.sh                 all paths / models / cluster settings in one place — source this first
 common.sh                 shared runtime env (caches, conda, modules) sourced by every job script
-prompts.txt               EVERY prompt used, in one file (task, open-inventory, augmentation)
+prompts.txt               EVERY prompt used, in one file — GENERATED from the source
+                          modules by tools/build_prompts_txt.py, so it cannot drift
 requirements.txt          python deps (TTS installs into its own venv, see augmentation/tts/)
 docs/                     pipeline figure
-prompts/                  prompt builders the ms-swift jsonls are generated from
-data_prep/                SLURP-TN -> manifests -> ms-swift jsonls (+ 60-label open-inventory variant)
+tools/                    build_prompts_txt.py (regenerate / --check prompts.txt)
+data_prep/                SLURP-TN -> manifests -> ms-swift jsonls (+ 60-label open-inventory
+                          variant); prompt_builders/ and the label inventories live here
 augmentation/             synthetic data pipeline (generation -> judging -> TTS -> screening -> manifests)
 training/                 LoRA SFT (ms-swift), adapter merge, Whisper-small baseline
 inference/                vLLM batch inference (zero-shot + merged adapters), Whisper inference
@@ -97,6 +99,18 @@ sbatch eval/eval_all_slot.sh        # WER, CER, CoER, CVER
 60-label + `unknown` prompt (Part 2 of `prompts.txt`); the abstention rule that
 folds the catch-all `general_quirky` into `unknown` is
 `eval/make_intent_submission_quirky2unk.py`.
+
+### Prompts
+
+Every prompt the system sends is collected in [`prompts.txt`](prompts.txt): the two task
+prompts (used identically zero-shot and as fine-tuning targets), the 60-label
+open-inventory prompt for the official test set, and the augmentation generation,
+judging and reference-ASR prompts. It is **generated** from the modules that send them:
+
+```bash
+python tools/build_prompts_txt.py           # regenerate
+python tools/build_prompts_txt.py --check   # fail if out of date (CI-friendly)
+```
 
 ## Synthetic data augmentation
 

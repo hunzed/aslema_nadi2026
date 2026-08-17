@@ -4,7 +4,8 @@ Produces Tunisian Derja SLU training data with inline slot annotations and
 voice-cloned speech, targeting the intents that are underrepresented in the
 2,677-utterance SLURP-TN training split.
 
-**All prompts are in [`../prompts.txt`](../prompts.txt) (Part 3).**
+**All prompts are in [`../prompts.txt`](../prompts.txt) (Part 3)** — generated from
+this code by `../tools/build_prompts_txt.py`, so it always matches what runs.
 
 ## Funnel (numbers from our run)
 

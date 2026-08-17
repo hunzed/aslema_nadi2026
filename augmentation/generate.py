@@ -60,6 +60,22 @@ ANCHORS = [
 ]
 
 
+# Task lines, one per generation mode. Module-level so that tools/build_prompts_txt.py
+# can emit the exact strings that are sent to the model (see prompts.txt, Part 3).
+TASK_COVERAGE = (
+    'TASK: produce {n_items} NEW Tunisian Derja utterances with intent "{intent}".\n'
+    'For item i use exactly the slot-label set given at position i below '
+    '(empty list = no slots). Invent fresh, realistic slot values:')
+TASK_PARAPHRASE = (
+    'TASK: produce {n_items} DIFFERENT Tunisian Derja paraphrases of this utterance. '
+    'Keep the SAME intent ("{intent}"), the SAME slot labels and the SAME slot values '
+    '(verbatim), but change the wording, word order and phrasing:')
+TASK_DISTRACTOR = (
+    'TASK: produce {n_items} NEW Tunisian Derja utterances with intent "{intent}" '
+    'that contain NO slot values at all ("slots": [], "annotated" == "text"), but are '
+    'phrased naturally, similar in flavor to slot-bearing requests.')
+
+
 def build_prompt(mode, intent, pool, k_shots, n_items, rng):
     seeds = pool["seeds"].get(intent, [])
     shots = rng.sample(seeds, min(len(seeds), max(0, k_shots - 2)))
@@ -77,23 +93,14 @@ def build_prompt(mode, intent, pool, k_shots, n_items, rng):
 
     if mode == "paraphrase":
         src = rng.choice(seeds)
-        lines += [
-            f'TASK: produce {n_items} DIFFERENT Tunisian Derja paraphrases of this utterance. '
-            f'Keep the SAME intent ("{intent}"), the SAME slot labels and the SAME slot values '
-            f'(verbatim), but change the wording, word order and phrasing:',
-            json.dumps({"annotated": src["annotated"]}, ensure_ascii=False)]
+        lines += [TASK_PARAPHRASE.format(n_items=n_items, intent=intent),
+                  json.dumps({"annotated": src["annotated"]}, ensure_ascii=False)]
     elif mode == "distractor":
-        lines += [
-            f'TASK: produce {n_items} NEW Tunisian Derja utterances with intent "{intent}" '
-            f'that contain NO slot values at all ("slots": [], "annotated" == "text"), but are '
-            f'phrased naturally, similar in flavor to slot-bearing requests.']
+        lines += [TASK_DISTRACTOR.format(n_items=n_items, intent=intent)]
     else:  # coverage
         picked = [rng.choice(combos) for _ in range(n_items)]
-        lines += [
-            f'TASK: produce {n_items} NEW Tunisian Derja utterances with intent "{intent}".',
-            'For item i use exactly the slot-label set given at position i below '
-            '(empty list = no slots). Invent fresh, realistic slot values:',
-            json.dumps(picked, ensure_ascii=False)]
+        lines += [TASK_COVERAGE.format(n_items=n_items, intent=intent),
+                  json.dumps(picked, ensure_ascii=False)]
     return "\n".join(lines)
 
 

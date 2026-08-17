@@ -1,23 +1,21 @@
 ASLEMA @ NADI-2026 SHARED TASK 5 - ALL PROMPTS
-=================================================================================
-Every prompt used by the system, in one file, verbatim from the code that ran.
+==============================================================================
+GENERATED FILE - do not edit by hand.
+Regenerate with:  python tools/build_prompts_txt.py
+Every prompt below is imported from the module that sends it, so this file
+cannot drift from the code that produced our results.
 
-  Part 1  Task prompts   - intent recognition, slot filling (zero-shot AND
-                           fine-tuning targets use the SAME prompts)
-  Part 2  Open-inventory prompt - the 60-label + `unknown` variant used for the
-                           official blind test set (abstention result)
-  Part 3  Augmentation prompts - synthetic data generation, judging, and the
-                           reference-selection ASR prompt
-
-Sources: prompts/intent_prompts.py, prompts/slot_filling_prompts.py,
-         data_prep/make_open_inventory_infer.py, augmentation/{generate,judge}.py,
-         augmentation/tts/gemini_asr_wer.py
-
+  Part 1  Task prompts       intent recognition and slot filling. The SAME
+                             prompts are used zero-shot and as fine-tuning
+                             targets, so both flow through identical evaluators.
+  Part 2  Open inventory      60 SLURP labels + `unknown`, used only for the
+                             official blind test set (the abstention result).
+  Part 3  Augmentation        synthetic data generation, judging, and the
+                             reference-selection ASR prompt.
 
 ==============================================================================
 PART 1.1  SUBTASK 5.1 - INTENT RECOGNITION
 ==============================================================================
-
 --- system prompt ---
 You are a spoken language understanding system for Tunisian Arabic (Tunisian dialect; code-switching with French/English words is common).
 
@@ -32,11 +30,9 @@ OUTPUT FORMAT (valid single-line JSON, no markdown or extra text): {"intent": "<
 Listen to the utterance and identify its intent.
 Respond ONLY with a single-line JSON object: {"intent": "<label>"}
 
-
 ==============================================================================
 PART 1.2  SUBTASK 5.2 - SLOT FILLING
 ==============================================================================
-
 --- system prompt ---
 You are an automatic speech recognition and spoken language understanding system for Tunisian Arabic (Tunisian dialect, written in Arabic script; code-switching with French/English words is common).
 
@@ -52,14 +48,12 @@ Output only the annotated transcription line: no translation, no explanation, no
 <audio>
 Transcribe the audio with inline semantic slots as instructed.
 
-
 ==============================================================================
-PART 2  OPEN INVENTORY (60 SLURP LABELS + `unknown`) - OFFICIAL TEST SET
+PART 2  OPEN INVENTORY (60 SLURP LABELS + `unknown`)
 ==============================================================================
-
-Used ONLY for the official blind test set (the abstention result). Identical to
-Part 1.1 except: full 60-label SLURP inventory, `unknown` as an allowed answer,
-and the six trained scenarios named explicitly.
+Used ONLY for the official blind test set. Differs from Part 1.1 in three
+ways, all prompt-side: the full 60-label inventory, `unknown` as an allowed
+answer, and the six trained scenarios named explicitly.
 
 --- system prompt ---
 You are a spoken language understanding system for Tunisian Arabic (Tunisian dialect; code-switching with French/English words is common).
@@ -80,142 +74,96 @@ OUTPUT FORMAT (valid single-line JSON, no markdown or extra text): {"intent": "<
 Listen to the utterance and identify its intent.
 Respond ONLY with a single-line JSON object: {"intent": "<label>"}
 
-
 ==============================================================================
 PART 3  SYNTHETIC DATA AUGMENTATION
 ==============================================================================
+STAGE 1  GENERATION  (augmentation/generate.py)
+  bulk intents      : gemini-3.6-flash
+  rare/zero-coverage: set GEN_MODEL=<pro model> (see augmentation/run_pipeline.sh)
+  Each call = system prompt + slot inventory + few-shot examples
+  (2 fixed format anchors + up to 4 same-intent seeds drawn ONLY from the
+  train split) + one task line, requesting a JSON array of items.
 
-STEP 1  GENERATE  (bin/generate.py, gemini-3.6-flash; rare intents use
-                   gemini-3.1-pro-preview)
---------------------------------------------------------------------------------
-Each API call = SYSTEM PROMPT + slot inventory + few-shot examples
-(2 fixed anchors + up to 4 same-intent train seeds) + one TASK line,
-asks for a JSON array of ~20 items.
+--- generator system prompt ---
+You are a native Tunisian Arabic (Derja) speaker creating training data for a Tunisian voice assistant (SLURP-TN style).
 
-SYSTEM PROMPT (verbatim):
+HARD RULES:
+1. Language: authentic spoken TUNISIAN Derja in Arabic script. NEVER Modern Standard Arabic, never Egyptian/Levantine/Gulf. Natural Tunisian function words (بلاهي، برشا، تو، فما، شنوة، علاش، نحب، باش...) and natural French/English code-switching exactly like the examples (des alarmes, email, week-end...).
+2. Style: short spoken commands/questions to a voice assistant, 3~15 words, first person, casual. No punctuation-heavy written style.
+3. Annotation format: wrap each slot value as `<slot_label> value >` inline, e.g.:
+   بلاهي فيقني <time> السبعة و النصف متاع الصباح >
+   A space after `<slot_label>` and a space before the closing `>`. Slot labels come ONLY from the provided slot inventory. Nested slots are forbidden.
+4. `text` must equal `annotated` with the markup removed (same words, same order).
+5. Diversity: every utterance must differ substantially from the examples and from each other (different wording, structure, slot values). Invent NEW realistic slot values (Tunisian names, places, times, artists...) - do not copy values from the examples.
 
-  You are a native Tunisian Arabic (Derja) speaker creating training data
-  for a Tunisian voice assistant (SLURP-TN style).
+Return ONLY a JSON array, each element:
+{"text": "...", "annotated": "...", "intent": "...", "slots": [{"label": "...", "value": "..."}]}
 
-  HARD RULES:
-  1. Language: authentic spoken TUNISIAN Derja in Arabic script. NEVER
-     Modern Standard Arabic, never Egyptian/Levantine/Gulf. Natural
-     Tunisian function words (بلاهي، برشا، تو، فما، شنوة، علاش، نحب، باش...)
-     and natural French/English code-switching exactly like the examples
-     (des alarmes, email, week-end...).
-  2. Style: short spoken commands/questions to a voice assistant, 3~15
-     words, first person, casual. No punctuation-heavy written style.
-  3. Annotation format: wrap each slot value as `<slot_label> value >`
-     inline, e.g.:
-        بلاهي فيقني <time> السبعة و النصف متاع الصباح >
-     A space after `<slot_label>` and a space before the closing `>`.
-     Slot labels come ONLY from the provided slot inventory. Nested slots
-     are forbidden.
-  4. `text` must equal `annotated` with the markup removed (same words,
-     same order).
-  5. Diversity: every utterance must differ substantially from the
-     examples and from each other (different wording, structure, slot
-     values). Invent NEW realistic slot values (Tunisian names, places,
-     times, artists...) - do not copy values from the examples.
+--- task line: COVERAGE mode (the main mode) ---
+TASK: produce {n_items} NEW Tunisian Derja utterances with intent "{intent}".
+For item i use exactly the slot-label set given at position i below (empty list = no slots). Invent fresh, realistic slot values:
+[["time"], [], ["person","event_name"], ...]   <- slot-label sets, sampled from the gold combination distribution
 
-  Return ONLY a JSON array, each element:
-  {"text": "...", "annotated": "...", "intent": "...",
-   "slots": [{"label": "...", "value": "..."}]}
+--- task line: PARAPHRASE mode ---
+TASK: produce {n_items} DIFFERENT Tunisian Derja paraphrases of this utterance. Keep the SAME intent ("{intent}"), the SAME slot labels and the SAME slot values (verbatim), but change the wording, word order and phrasing:
+{"annotated": "<one real training row>"}
 
-TASK LINE, mode "coverage" (main mode, verbatim):
+--- task line: DISTRACTOR mode ---
+TASK: produce {n_items} NEW Tunisian Derja utterances with intent "{intent}" that contain NO slot values at all ("slots": [], "annotated" == "text"), but are phrased naturally, similar in flavor to slot-bearing requests.
 
-  TASK: produce {N} NEW Tunisian Derja utterances with intent "{intent}".
-  For item i use exactly the slot-label set given at position i below
-  (empty list = no slots). Invent fresh, realistic slot values:
-  [["time"], [], ["person","event_name"], ...]     <- sampled from gold combos
+------------------------------------------------------------------------------
+STAGE 2  DETERMINISTIC VALIDATION  (augmentation/validate.py) - no model
+------------------------------------------------------------------------------
+  In order: annotation grammar; text == annotated minus markup; label and
+  intent inventory membership; Arabic-script ratio floor; 2-25 token length
+  window; character-3gram near-duplicate check against gold rows and against
+  previously accepted synthetic rows of the same intent.
 
-TASK LINE, mode "paraphrase" (verbatim):
+------------------------------------------------------------------------------
+STAGE 3  JUDGING PANEL  (augmentation/judge.py)
+------------------------------------------------------------------------------
+  annotators: gemini-3.1-pro-preview, gemini-3.6-flash, gemini-2.5-pro
+  An item is kept on a 2-of-3 majority. A single annotator passes an item when
+  derja >= 4, natural >= 3, intent_match and slots_ok all hold; a markup repair
+  is accepted only if the repaired string re-validates in the Stage-2 parser.
 
-  TASK: produce {N} DIFFERENT Tunisian Derja paraphrases of this
-  utterance. Keep the SAME intent ("{intent}"), the SAME slot labels and
-  the SAME slot values (verbatim), but change the wording, word order and
-  phrasing:
-  {"annotated": "<a real train row>"}
+--- judge rubric prompt ---
+You are a strict native Tunisian Arabic (Derja) reviewer auditing synthetic SLU training data (SLURP-TN style).
 
-TASK LINE, mode "distractor" (verbatim):
+For EACH item judge:
+- derja (1-5): 5 = unmistakably spoken Tunisian Derja (Tunisian function words, natural French/English code-switching fine); 1 = MSA or another dialect.
+- natural (1-5): does it sound like something a person says to a voice assistant?
+- intent_match (bool): does the text genuinely express the stated intent label?
+- slots_ok (bool): in `annotated`, is every marked span a correct value for its slot label, AND is no obvious slot value left unmarked? Format: `<label> value >`.
+- If slots_ok is false ONLY because of fixable markup (wrong boundary, missed span, wrong label), provide `fixed_annotated` with the minimal correction. Never rewrite the words themselves.
 
-  TASK: produce {N} NEW Tunisian Derja utterances with intent "{intent}"
-  that contain NO slot values at all ("slots": [], "annotated" == "text"),
-  but are phrased naturally, similar in flavor to slot-bearing requests.
+Return ONLY a JSON array, one object per item, same order:
+{"id": "...", "derja": 1-5, "natural": 1-5, "intent_match": true/false, "slots_ok": true/false, "fixed_annotated": "..." (optional)}
 
---------------------------------------------------------------------------------
-STEP 2  VALIDATE  (bin/validate.py, no API, free)
---------------------------------------------------------------------------------
-  reject if: annotation grammar broken | slot label not in the 34-label
-  inventory | intent not in the 23-label inventory | text != annotated
-  minus markup | Arabic-letter ratio < 50% | <2 or >25 words |
-  near-duplicate of ANY train/dev row or earlier synthetic (3-gram
-  Jaccard >= 0.85)
-
---------------------------------------------------------------------------------
-STEP 3  JUDGE = MULTI-ANNOTATOR PANEL  (bin/judge.py)
---------------------------------------------------------------------------------
-  3 different models annotate every item independently:
-    gemini-3.1-pro-preview , gemini-3.6-flash , gemini-2.5-pro
-  KEEP on majority (2/3). Each annotator gets, per batch of 10 items:
-
-RUBRIC PROMPT (verbatim):
-
-  You are a strict native Tunisian Arabic (Derja) reviewer auditing
-  synthetic SLU training data (SLURP-TN style).
-
-  For EACH item judge:
-  - derja (1-5): 5 = unmistakably spoken Tunisian Derja (Tunisian function
-    words, natural French/English code-switching fine); 1 = MSA or another
-    dialect.
-  - natural (1-5): does it sound like something a person says to a voice
-    assistant?
-  - intent_match (bool): does the text genuinely express the stated intent
-    label?
-  - slots_ok (bool): in `annotated`, is every marked span a correct value
-    for its slot label, AND is no obvious slot value left unmarked?
-    Format: `<label> value >`.
-  - If slots_ok is false ONLY because of fixable markup (wrong boundary,
-    missed span, wrong label), provide `fixed_annotated` with the minimal
-    correction. Never rewrite the words themselves.
-
-  Return ONLY a JSON array, one object per item, same order:
-  {"id": "...", "derja": 1-5, "natural": 1-5, "intent_match": true/false,
-   "slots_ok": true/false, "fixed_annotated": "..." (optional)}
-
-  pass rule per annotator: derja>=4 AND natural>=3 AND intent_match AND
-  slots_ok. A markup repair from the lead annotator is accepted only if it
-  re-validates in STEP 2's parser.
-
-  output: augmentation/data/gen_kept.jsonl  +  tts_queue.jsonl ({id, text})
-
---------------------------------------------------------------------------------
-STEP 4  SPEECH  (augmentation/tts/, VoxCPM2 voice cloning)  -- NO PROMPT
---------------------------------------------------------------------------------
+------------------------------------------------------------------------------
+STAGE 4  SPEECH  (augmentation/tts/) - no prompt
+------------------------------------------------------------------------------
   Two renditions of every kept text, so one text yields up to two utterances:
     (a) base VoxCPM2
     (b) VoxCPM2 + LoRA fine-tuned on the SLURP-TN TRAIN split only
-        (170 steps ~ 2 epochs; augmentation/tts/finetune/)
-  Both use the SAME 152-clip reference pool for voice cloning; the reference for
-  each item is chosen deterministically by hash of its id.
-  Reference pool = 150 train clips scoring WER 0.00 under the Part-3 ASR prompt
-  (of 2,330 clips of 2.5-10 s scored) + 2 clips verified by ear.
-  A per-item silence guard retries generation up to 3x (RMS < 0.01 or < 0.4 s).
+  Both use the SAME reference pool for voice cloning; each item's reference is
+  chosen deterministically by a hash of its id. The pool is built by scoring
+  train clips with the ASR prompt below and keeping the cleanest, plus two
+  clips verified by ear. A silence guard retries generation up to 3x.
 
-STEP 5  ACOUSTIC SCREEN  (augmentation/build_manifests.py)  -- NO PROMPT, NO MODEL
---------------------------------------------------------------------------------
-  Deterministic, code-only screen applied to EVERY rendition, scored against its
-  own text (thresholds calibrated on a 3k-sample analysis of real output):
-      0.4 s <= duration <= 30 s | RMS >= 0.01 | clipped samples < 5%
-      voiced-frame activity >= 0.10 | 0.04 <= seconds-per-character <= 0.40
-  NOTE ON SCOPE: this is the only filter applied to the synthetic AUDIO. No
-  LLM/ASR authenticity or naturalness check was run per clip. A 650-clip
-  listening study (real vs base vs LoRA) was used only to CHOOSE the base
-  variant for the mixed training set, not to accept or reject individual clips.
+--- reference-selection ASR prompt ---
+Transcribe this Tunisian Arabic (Derja) audio VERBATIM. Arabic script for Arabic words; keep French/English code-switched words in Latin script exactly as spoken. No diacritics, no punctuation, no explanations - output ONLY the raw transcription text.
 
-STEP 6  PACKAGE + TRAIN  (augmentation/build_manifests.py)
---------------------------------------------------------------------------------
-  Emits manifests + ms-swift SFT jsonls through the SAME converters used for the
-  real data, so synthetic and real rows carry byte-identical prompts:
-      synth = synthetic only | mix = real train + synthetic
-================================================================================
+------------------------------------------------------------------------------
+STAGE 5  ACOUSTIC SCREEN  (augmentation/build_manifests.py) - no model
+------------------------------------------------------------------------------
+  Deterministic, code-only screen applied to EVERY rendition, scored against
+  its own text: duration, signal level, clipping, voiced-frame activity and
+  speaking rate (seconds per character).
+
+  SCOPE: this is the ONLY filter applied to the synthetic audio. No per-clip
+  LLM or ASR authenticity/naturalness check was run. A 650-clip listening study
+  (real vs base vs LoRA) informed only the choice of TTS variant for the mixed
+  training set; it did not accept or reject individual clips.
+
+==============================================================================
