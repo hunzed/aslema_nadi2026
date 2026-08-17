@@ -29,8 +29,8 @@ import json
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))  # for prompt_builders/
-from prompt_builders.intent_prompts import build_system_prompt, load_labels, USER_INSTRUCTION
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # for prompts/
+from prompts.intent_prompts import build_system_prompt, load_labels, USER_INSTRUCTION
 
 
 def build_user_content(family):

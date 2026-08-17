@@ -1,8 +1,8 @@
 #!/bin/bash -l
 
 #SBATCH -J nadi5_voxcpm_tts
-#SBATCH -o ${PROJ}/augmentation/logs/tts_%j.out
-#SBATCH -e ${PROJ}/augmentation/logs/tts_%j.err
+#SBATCH -o ${PROJ}/bin/augmentation/logs/tts_%j.out
+#SBATCH -e ${PROJ}/bin/augmentation/logs/tts_%j.err
 #SBATCH -p gpu-H200
 #SBATCH -q ${SLURM_QOS}
 #SBATCH --gres=gpu:1

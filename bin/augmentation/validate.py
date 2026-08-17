@@ -21,7 +21,8 @@ import re
 import sys
 from pathlib import Path
 
-DATA = Path(__file__).resolve().parent.parent / "data"
+DATA = Path(os.environ.get("AUG_DATA",
+                          Path(os.environ["PROJ"]) / "data" / "augmentation"))
 PROJ = Path(os.environ["PROJ"])
 
 OPEN_RE = re.compile(r"<([a-z_]+)>")

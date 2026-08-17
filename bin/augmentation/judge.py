@@ -31,7 +31,8 @@ sys.path.insert(0, str(Path(__file__).parent))
 from gemini_client import JUDGE_MODEL, JUDGE_MODELS, generate_json  # noqa: E402
 from validate import parse_annotation, norm                         # noqa: E402
 
-DATA = Path(__file__).resolve().parent.parent / "data"
+DATA = Path(os.environ.get("AUG_DATA",
+                          Path(os.environ["PROJ"]) / "data" / "augmentation"))
 PROJ = Path(os.environ["PROJ"])
 
 RUBRIC = """You are a strict native Tunisian Arabic (Derja) reviewer auditing synthetic SLU training data (SLURP-TN style).

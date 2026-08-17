@@ -4,14 +4,14 @@
 Every prompt in prompts.txt is imported from its source module here, so the
 released prompt file cannot drift from what the pipeline runs.
 
-    python tools/build_prompts_txt.py          # rewrites prompts.txt
-    python tools/build_prompts_txt.py --check  # non-zero exit if out of date (CI)
+    python bin/tools/build_prompts_txt.py          # rewrites prompts.txt
+    python bin/tools/build_prompts_txt.py --check  # non-zero exit if out of date (CI)
 
 Sources:
-  Part 1  data_prep/prompt_builders/{intent,slot_filling}_prompts.py
-  Part 2  data_prep/make_open_inventory_infer.py
-  Part 3  augmentation/generate.py, augmentation/judge.py,
-          augmentation/tts/gemini_asr_wer.py
+  Part 1  bin/prompts/{intent,slot_filling}_prompts.py
+  Part 2  bin/data_prep/make_open_inventory_infer.py
+  Part 3  bin/augmentation/generate.py, bin/augmentation/judge.py,
+          bin/augmentation/tts/gemini_asr_wer.py
 """
 import argparse
 import importlib.util
@@ -19,7 +19,7 @@ import os
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 os.environ.setdefault("PROJ", str(ROOT))          # some modules read PROJ at import
 BAR = "=" * 78
 
@@ -46,22 +46,22 @@ def main():
                     help="verify prompts.txt is up to date instead of writing it")
     args = ap.parse_args()
 
-    sys.path.insert(0, str(ROOT / "data_prep"))
-    ip = load("data_prep/prompt_builders/intent_prompts.py", "intent_prompts")
-    sp = load("data_prep/prompt_builders/slot_filling_prompts.py", "slot_filling_prompts")
-    op = load("data_prep/make_open_inventory_infer.py", "open_inv")
-    gen = load("augmentation/generate.py", "aug_generate")
-    jud = load("augmentation/judge.py", "aug_judge")
-    asr = load("augmentation/tts/gemini_asr_wer.py", "aug_asr")
+    sys.path.insert(0, str(ROOT / "bin"))
+    ip = load("bin/prompts/intent_prompts.py", "intent_prompts")
+    sp = load("bin/prompts/slot_filling_prompts.py", "slot_filling_prompts")
+    op = load("bin/data_prep/make_open_inventory_infer.py", "open_inv")
+    gen = load("bin/augmentation/generate.py", "aug_generate")
+    jud = load("bin/augmentation/judge.py", "aug_judge")
+    asr = load("bin/augmentation/tts/gemini_asr_wer.py", "aug_asr")
 
-    labels = ROOT / "data_prep/labels"
+    labels = ROOT / "conf" / "labels"
     intents = ip.load_labels(labels / "intent_labels.txt")
     slots = sp.load_labels(labels / "slot_labels.txt")
 
     out = [f"""ASLEMA @ NADI-2026 SHARED TASK 5 - ALL PROMPTS
 {BAR}
 GENERATED FILE - do not edit by hand.
-Regenerate with:  python tools/build_prompts_txt.py
+Regenerate with:  python bin/tools/build_prompts_txt.py
 Every prompt below is imported from the module that sends it, so this file
 cannot drift from the code that produced our results.
 
@@ -91,9 +91,9 @@ cannot drift from the code that produced our results.
 
     out.append(section("PART 3  SYNTHETIC DATA AUGMENTATION"))
     out.append(
-        "STAGE 1  GENERATION  (augmentation/generate.py)\n"
+        "STAGE 1  GENERATION  (bin/augmentation/generate.py)\n"
         f"  bulk intents      : {gen.GEN_MODEL}\n"
-        "  rare/zero-coverage: set GEN_MODEL=<pro model> (see augmentation/run_pipeline.sh)\n"
+        "  rare/zero-coverage: set GEN_MODEL=<pro model> (see scripts/augmentation/run_pipeline.sh)\n"
         "  Each call = system prompt + slot inventory + few-shot examples\n"
         "  (2 fixed format anchors + up to 4 same-intent seeds drawn ONLY from the\n"
         "  train split) + one task line, requesting a JSON array of items.\n")
@@ -105,21 +105,21 @@ cannot drift from the code that produced our results.
                + '\n{"annotated": "<one real training row>"}\n')
     out.append("\n--- task line: DISTRACTOR mode ---\n" + gen.TASK_DISTRACTOR + "\n")
 
-    out.append("\n" + "-" * 78 + "\nSTAGE 2  DETERMINISTIC VALIDATION  (augmentation/validate.py) - no model\n"
+    out.append("\n" + "-" * 78 + "\nSTAGE 2  DETERMINISTIC VALIDATION  (bin/augmentation/validate.py) - no model\n"
                + "-" * 78 + "\n"
                "  In order: annotation grammar; text == annotated minus markup; label and\n"
                "  intent inventory membership; Arabic-script ratio floor; 2-25 token length\n"
                "  window; character-3gram near-duplicate check against gold rows and against\n"
                "  previously accepted synthetic rows of the same intent.\n")
 
-    out.append("\n" + "-" * 78 + "\nSTAGE 3  JUDGING PANEL  (augmentation/judge.py)\n" + "-" * 78 + "\n"
+    out.append("\n" + "-" * 78 + "\nSTAGE 3  JUDGING PANEL  (bin/augmentation/judge.py)\n" + "-" * 78 + "\n"
                f"  annotators: {', '.join(jud.JUDGE_MODELS)}\n"
                "  An item is kept on a 2-of-3 majority. A single annotator passes an item when\n"
                "  derja >= 4, natural >= 3, intent_match and slots_ok all hold; a markup repair\n"
                "  is accepted only if the repaired string re-validates in the Stage-2 parser.\n")
     out.append("\n--- judge rubric prompt ---\n" + jud.RUBRIC + "\n")
 
-    out.append("\n" + "-" * 78 + "\nSTAGE 4  SPEECH  (augmentation/tts/) - no prompt\n" + "-" * 78 + "\n"
+    out.append("\n" + "-" * 78 + "\nSTAGE 4  SPEECH  (bin/augmentation/tts/) - no prompt\n" + "-" * 78 + "\n"
                "  Two renditions of every kept text, so one text yields up to two utterances:\n"
                "    (a) base VoxCPM2\n"
                "    (b) VoxCPM2 + LoRA fine-tuned on the SLURP-TN TRAIN split only\n"
@@ -129,7 +129,7 @@ cannot drift from the code that produced our results.
                "  clips verified by ear. A silence guard retries generation up to 3x.\n")
     out.append("\n--- reference-selection ASR prompt ---\n" + asr.PROMPT + "\n")
 
-    out.append("\n" + "-" * 78 + "\nSTAGE 5  ACOUSTIC SCREEN  (augmentation/build_manifests.py) - no model\n"
+    out.append("\n" + "-" * 78 + "\nSTAGE 5  ACOUSTIC SCREEN  (bin/augmentation/build_manifests.py) - no model\n"
                + "-" * 78 + "\n"
                "  Deterministic, code-only screen applied to EVERY rendition, scored against\n"
                "  its own text: duration, signal level, clipping, voiced-frame activity and\n"
@@ -145,7 +145,7 @@ cannot drift from the code that produced our results.
     if args.check:
         current = target.read_text(encoding="utf-8") if target.exists() else ""
         if current != text:
-            print("prompts.txt is OUT OF DATE - run: python tools/build_prompts_txt.py")
+            print("prompts.txt is OUT OF DATE - run: python bin/tools/build_prompts_txt.py")
             return 1
         print("prompts.txt is up to date")
         return 0

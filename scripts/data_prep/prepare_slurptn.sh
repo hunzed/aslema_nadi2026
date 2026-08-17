@@ -28,10 +28,10 @@ set -e
 export NO_MODULES=1   # data prep is CPU-only; don't require cuda/gcc modules
 # $0 is a Slurm spool path under sbatch, not this file's real location.
 PROJ_ROOT="${SLURM_SUBMIT_DIR:-$(pwd)}"
-source "${PROJ}/common.sh"
+source "${PROJ}/scripts/common.sh"
 
 cd "$PROJ"
-VENDOR="$PROJ/vendor/SLURP-TN-baselines"
+VENDOR="$PROJ/data/vendor/SLURP-TN-baselines"
 DATA="$PROJ/data/slurptn"
 MANIFESTS="$DATA/data/manifests"
 
@@ -39,7 +39,7 @@ echo "Node: $(hostname)"; date
 
 # 1. baseline repo (data_prep.py + evaluation/scoring.py)
 if [ ! -d "$VENDOR/.git" ]; then
-    mkdir -p "$PROJ/vendor"
+    mkdir -p "$PROJ/data/vendor"
     git clone https://github.com/elyadata/SLURP-TN-baselines.git "$VENDOR"
 fi
 

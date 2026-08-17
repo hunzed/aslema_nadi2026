@@ -34,7 +34,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from gemini_client import GEN_MODEL, generate_json  # noqa: E402
 
-DATA = Path(__file__).resolve().parent.parent / "data"
+DATA = Path(os.environ.get("AUG_DATA",
+                          Path(os.environ["PROJ"]) / "data" / "augmentation"))
 
 SYSTEM = """You are a native Tunisian Arabic (Derja) speaker creating training data for a Tunisian voice assistant (SLURP-TN style).
 

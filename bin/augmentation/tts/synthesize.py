@@ -32,7 +32,7 @@ import sys
 from pathlib import Path
 
 NADI = Path(os.environ["PROJ"])
-DATA = NADI / "augmentation/data"
+DATA = NADI / "data" / "augmentation"
 
 
 def load_refs(min_s=2.5, max_s=10.0):

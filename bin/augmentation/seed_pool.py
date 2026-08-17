@@ -61,7 +61,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--target-total", type=int, default=12000,
                     help="approx pre-filter synthetic size to plan quotas for")
-    ap.add_argument("--out-dir", default=str(PROJ / "augmentation/data"))
+    ap.add_argument("--out-dir", default=str(PROJ / "data" / "augmentation"))
     ap.add_argument("--allow-dev-seeds", action="store_true",
                     help="OPT-IN: let the two zero-train intents (Emails, set) "
                          "borrow style seeds from dev. DEFAULT IS TRAIN-ONLY - "

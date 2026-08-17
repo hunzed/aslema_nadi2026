@@ -30,7 +30,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 NADI = Path(os.environ["PROJ"])
-sys.path.insert(0, str(NADI / "augmentation"))
+sys.path.insert(0, str(NADI / "bin" / "augmentation"))
 from gemini_client import client, generate_json  # noqa: E402  (client reuse)
 
 ASR_MODEL = os.environ.get("ASR_MODEL", "gemini-3.1-pro-preview")

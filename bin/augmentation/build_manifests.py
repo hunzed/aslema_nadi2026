@@ -25,7 +25,8 @@ import subprocess
 from collections import Counter, defaultdict
 from pathlib import Path
 
-DATA = Path(__file__).resolve().parent.parent / "data"
+DATA = Path(os.environ.get("AUG_DATA",
+                          Path(os.environ["PROJ"]) / "data" / "augmentation"))
 PROJ = Path(os.environ["PROJ"])
 PY = PROJ / "conda/envs/nadi_task5/bin/python"
 FIELDS = ["ID", "duration", "wav", "tun_transcription",

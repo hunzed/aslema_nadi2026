@@ -22,7 +22,7 @@ def main():
     args = ap.parse_args()
 
     scores = {}
-    for l in open(NADI / "augmentation/tts/ref_asr_scores.jsonl", encoding="utf-8"):
+    for l in open(NADI / "data" / "augmentation" / "tts" / "ref_asr_scores.jsonl", encoding="utf-8"):
         r = json.loads(l)
         if r.get("wer") is not None:
             scores[r["id"]] = r          # last write wins on resume dups
@@ -37,7 +37,7 @@ def main():
         if r["id"] in KNOWN_GOOD and r["id"] not in ids:
             pool.append(r)
 
-    out = NADI / "augmentation/tts/ref_pool.txt"
+    out = NADI / "data" / "augmentation" / "tts" / "ref_pool.txt"
     with open(out, "w", encoding="utf-8") as f:
         for r in pool:
             f.write(f"{r['wav']}\t{r['gold']}\n")

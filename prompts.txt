@@ -1,7 +1,7 @@
 ASLEMA @ NADI-2026 SHARED TASK 5 - ALL PROMPTS
 ==============================================================================
 GENERATED FILE - do not edit by hand.
-Regenerate with:  python tools/build_prompts_txt.py
+Regenerate with:  python bin/tools/build_prompts_txt.py
 Every prompt below is imported from the module that sends it, so this file
 cannot drift from the code that produced our results.
 
@@ -77,9 +77,9 @@ Respond ONLY with a single-line JSON object: {"intent": "<label>"}
 ==============================================================================
 PART 3  SYNTHETIC DATA AUGMENTATION
 ==============================================================================
-STAGE 1  GENERATION  (augmentation/generate.py)
+STAGE 1  GENERATION  (bin/augmentation/generate.py)
   bulk intents      : gemini-3.6-flash
-  rare/zero-coverage: set GEN_MODEL=<pro model> (see augmentation/run_pipeline.sh)
+  rare/zero-coverage: set GEN_MODEL=<pro model> (see scripts/augmentation/run_pipeline.sh)
   Each call = system prompt + slot inventory + few-shot examples
   (2 fixed format anchors + up to 4 same-intent seeds drawn ONLY from the
   train split) + one task line, requesting a JSON array of items.
@@ -112,7 +112,7 @@ TASK: produce {n_items} DIFFERENT Tunisian Derja paraphrases of this utterance. 
 TASK: produce {n_items} NEW Tunisian Derja utterances with intent "{intent}" that contain NO slot values at all ("slots": [], "annotated" == "text"), but are phrased naturally, similar in flavor to slot-bearing requests.
 
 ------------------------------------------------------------------------------
-STAGE 2  DETERMINISTIC VALIDATION  (augmentation/validate.py) - no model
+STAGE 2  DETERMINISTIC VALIDATION  (bin/augmentation/validate.py) - no model
 ------------------------------------------------------------------------------
   In order: annotation grammar; text == annotated minus markup; label and
   intent inventory membership; Arabic-script ratio floor; 2-25 token length
@@ -120,7 +120,7 @@ STAGE 2  DETERMINISTIC VALIDATION  (augmentation/validate.py) - no model
   previously accepted synthetic rows of the same intent.
 
 ------------------------------------------------------------------------------
-STAGE 3  JUDGING PANEL  (augmentation/judge.py)
+STAGE 3  JUDGING PANEL  (bin/augmentation/judge.py)
 ------------------------------------------------------------------------------
   annotators: gemini-3.1-pro-preview, gemini-3.6-flash, gemini-2.5-pro
   An item is kept on a 2-of-3 majority. A single annotator passes an item when
@@ -141,7 +141,7 @@ Return ONLY a JSON array, one object per item, same order:
 {"id": "...", "derja": 1-5, "natural": 1-5, "intent_match": true/false, "slots_ok": true/false, "fixed_annotated": "..." (optional)}
 
 ------------------------------------------------------------------------------
-STAGE 4  SPEECH  (augmentation/tts/) - no prompt
+STAGE 4  SPEECH  (bin/augmentation/tts/) - no prompt
 ------------------------------------------------------------------------------
   Two renditions of every kept text, so one text yields up to two utterances:
     (a) base VoxCPM2
@@ -155,7 +155,7 @@ STAGE 4  SPEECH  (augmentation/tts/) - no prompt
 Transcribe this Tunisian Arabic (Derja) audio VERBATIM. Arabic script for Arabic words; keep French/English code-switched words in Latin script exactly as spoken. No diacritics, no punctuation, no explanations - output ONLY the raw transcription text.
 
 ------------------------------------------------------------------------------
-STAGE 5  ACOUSTIC SCREEN  (augmentation/build_manifests.py) - no model
+STAGE 5  ACOUSTIC SCREEN  (bin/augmentation/build_manifests.py) - no model
 ------------------------------------------------------------------------------
   Deterministic, code-only screen applied to EVERY rendition, scored against
   its own text: duration, signal level, clipping, voiced-frame activity and
